@@ -6,18 +6,18 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
+import pandas as pd
 import time
 
 # Set up Chrome options (optional)
 options = Options()
-# Uncomment the line below to run the browser in headless mode (no GUI)
 options.add_argument("--headless")  # Run in headless mode (no browser window)
 
 # Set up the Chrome WebDriver
 driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
 
 # Navigate to the target URL
-url = "https://williamandmary.campusdish.com/LocationsAndMenus/FoodHallSadler"
+url = "https://williamandmary.campusdish.com/LocationsAndMenus/CommonsDiningHall"
 driver.get(url)
 
 # Wait for the page to fully load (if necessary)
@@ -35,35 +35,21 @@ soup = BeautifulSoup(html, 'html.parser')
 # Extract the product titles before interacting
 titles = soup.find_all('span', {'class': 'sc-fjvvzt kQweEp HeaderItemNameLink'})
 item_names = [title.text for title in titles]
-print("All Item Names:", item_names)
 
-# Locate all buttons using their class or any unique attribute (modify as needed)
-buttons = driver.find_elements(By.CLASS_NAME, "HeaderItem")
-for button in buttons[:5]:
-    print(f"Name: {button.accessible_name}")
-# Prefilter: Filter out disabled buttons and get the indices of enabled buttons
-enabled_buttons_indices = [index for index, button in enumerate(buttons) if not button.get_attribute('disabled')]
+# Locate all buttons and add only enabled buttons to the list
+enabled_buttons = []
+for button in driver.find_elements(By.CLASS_NAME, "HeaderItem"):
+    if not button.get_attribute('disabled'):
+        enabled_buttons.append(button)  # Only add enabled buttons
 
-enabled_buttons = [buttons[index] for index in enabled_buttons_indices]
-for button in enabled_buttons[:5]:
-    print(f"Name(enabled): {button.accessible_name}")
 # Create a filtered list of item names corresponding to enabled buttons using their indices
-# Ensure we do not exceed the bounds of item_names
-filtered_item_names = [item_names[index] for index in enabled_buttons_indices if index < len(item_names)]
-print(f"Total buttons: {len(buttons)}, Enabled buttons: {len(enabled_buttons)}")
-print("Filtered Item Names:", filtered_item_names)
-
-# Check if the lengths of enabled_buttons and filtered_item_names match
-if len(enabled_buttons) != len(filtered_item_names):
-    print("Error: Mismatch between enabled buttons and filtered item names!")
-    driver.quit()
-    raise ValueError("The lengths of enabled_buttons and filtered_item_names do not match!")
+filtered_item_names = [button.accessible_name for button in enabled_buttons]
 
 # Dictionary to store item names and their nutrition facts
 nutrition_data = {}
 
 # Iterate through enabled buttons and click them to access nested content
-for index, button in enumerate(enabled_buttons[:5]):  # Use enabled_buttons and filtered_item_names together
+for index, button in enumerate(enabled_buttons):  # Use enabled_buttons and filtered_item_names together
     try:
         # Scroll to the button (if it's not visible on the screen)
         driver.execute_script("arguments[0].scrollIntoView(true);", button)
@@ -71,8 +57,13 @@ for index, button in enumerate(enabled_buttons[:5]):  # Use enabled_buttons and 
         # Use JavaScript to click the button
         driver.execute_script("arguments[0].click();", button)
 
-        # Wait for nested content to load (if necessary)
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'ModalProductServingSize')))
+        # Wait until the modal with nutritional information appears and is fully loaded
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, 'ModalProductServingSize'))
+        )
+
+        # Ensure the content stabilizes before proceeding (give time for any dynamic content to load)
+        time.sleep(1)  # Optional: Adjust this time based on the page load behavior
 
         # Get the updated page source after clicking the button
         html_after_click = driver.page_source
@@ -131,3 +122,5 @@ driver.quit()
 
 # Print the nutrition data dictionary
 print("Nutrition Data:", nutrition_data)
+df=pd.DataFrame.from_dict(nutrition_data, orient='index')
+print(df)
