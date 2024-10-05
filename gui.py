@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter.messagebox as messagebox
 from PIL import Image, ImageTk
 import calendar
 from datetime import datetime
@@ -6,8 +7,8 @@ import pandas as pd
 
 def get_menu_data(dining_hall):
     menus = {"Sadler": None, "Commons": None}
-    menus["Sadler"] = pd.read_csv("our_df.csv")  # Adjust the path if needed
-    menus["Commons"] = pd.read_csv("our_df.csv")  # Adjust the path if needed
+    menus["Sadler"] = pd.read_csv("sad_menu.csv")  # Adjust the path if needed
+    menus["Commons"] = pd.read_csv("caf_menu.csv")  # Adjust the path if needed
     return menus.get(dining_hall, [])
 
 class DiningHallApp:
@@ -27,7 +28,7 @@ class DiningHallApp:
         sadler_img = Image.open("sadler.jpeg").resize((380, 300))
         commons_img = Image.open("commons.jpeg").resize((380, 300))
         cart_img = Image.open("cart.png").resize((50, 50))
-        calendar_img = Image.open("calendar.png").resize((50,50))
+        calendar_img = Image.open("calendar.png").resize((50, 50))
 
         self.sadler_photo = ImageTk.PhotoImage(sadler_img)
         self.commons_photo = ImageTk.PhotoImage(commons_img)
@@ -91,15 +92,15 @@ class DiningHallApp:
             item_label = tk.Label(item_frame, text=row['Item Name'], font=("Arial", 12), bg='white', fg='black')
             item_label.pack(pady=5)
 
+            # Using a lambda function with item to ensure the correct item is passed
             item_button = tk.Button(item_frame, text="View Details", font=("Arial", 10),
                                     command=lambda r=row: self.show_item_details(r))
             item_button.pack(pady=5)
 
     def show_item_details(self, item):
-        # Create a new window to show the details of the selected item
         details_window = tk.Toplevel(self.master)
         details_window.title(f"{item['Item Name']} Details")
-        details_window.geometry("300x250")
+        details_window.geometry("300x300")
         details_window.configure(bg=self.bg_color)
 
         name_label = tk.Label(details_window, text=item['Item Name'], font=("Arial", 14, "bold"), bg=self.bg_color, fg=self.text_color)
@@ -114,17 +115,16 @@ class DiningHallApp:
         nutrition_label = tk.Label(details_window, text=nutrition_text, font=("Arial", 12), bg=self.bg_color, fg=self.text_color)
         nutrition_label.pack(pady=10)
 
-        # Label to show added to cart message
-        self.added_to_cart_label = tk.Label(details_window, text="", font=("Arial", 12), bg='green')
-        self.added_to_cart_label.pack(pady=5)
-
         add_to_cart_button = tk.Button(details_window, text="Add to Cart", font=("Arial", 12),
-                                       command=lambda: self.add_to_cart(item))
+                                       command=lambda: self.add_to_cart(item, details_window))
         add_to_cart_button.pack(pady=10)
 
-    def add_to_cart(self, item):
+        # Label to show added to cart message
+        self.added_to_cart_label = tk.Label(details_window, text="", font=("Arial", 10), bg=self.bg_color, fg='green')
+        self.added_to_cart_label.pack(pady=5)
+
+    def add_to_cart(self, item, details_window):
         self.cart.append(item)
-        # Update label text instead of showing a popup
         self.added_to_cart_label.config(text=f"{item['Item Name']} added to cart!")
 
     def open_cart(self):
@@ -135,23 +135,27 @@ class DiningHallApp:
 
         if self.cart:
             total_nutrition = {}
-
             for item in self.cart:
                 item_text = f"{item['Item Name']}"
                 tk.Label(cart_window, text=item_text, font=("Arial", 12), bg=self.bg_color, fg=self.text_color).pack(pady=5)
-                
                 # Accumulate the nutritional values for each item in the cart
                 for col in item.index:
                     if col != "Item Name" and not pd.isna(item[col]):
-                        # Remove units from strings before converting to float
-                        value_str = item[col].replace(" g", "").replace(" mg", "").replace(" kcal", "")
-                        try:
-                            value = float(value_str)
-                            if col not in total_nutrition:
-                                total_nutrition[col] = 0
-                            total_nutrition[col] += value
-                        except ValueError:
-                            pass  # Handle non-numeric values
+                        if col not in total_nutrition:
+                            total_nutrition[col] = 0
+                        # Handle the item values based on their type
+                        value = item[col]
+                        if isinstance(value, str):
+                            # Remove non-numeric characters and convert to float if it's a string
+                            numeric_string = ''.join(filter(str.isdigit, value))
+                            if numeric_string:  # Check if the string is not empty
+                                numeric_value = float(numeric_string)
+                            else:
+                                numeric_value = 0.0  # Default to 0 if no numeric string found
+                        else:
+                            # If it's already a number, just use it
+                            numeric_value = float(value)
+                        total_nutrition[col] += numeric_value  # Assuming the nutrition values are numeric
 
             # Display total nutritional facts
             tk.Label(cart_window, text="Total Nutritional Facts:", font=("Arial", 14, "bold"), bg=self.bg_color, fg=self.text_color).pack(pady=10)
@@ -160,6 +164,8 @@ class DiningHallApp:
 
         else:
             tk.Label(cart_window, text="Your cart is empty", font=("Arial", 14), bg=self.bg_color, fg=self.text_color).pack(pady=20)
+
+
 
     def open_calendar(self):
         calendar_window = tk.Toplevel(self.master)
@@ -177,48 +183,25 @@ class DiningHallApp:
         cal_frame = tk.Frame(calendar_window, bg=self.bg_color)
         cal_frame.pack()
 
-        days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        for i, day in enumerate(days):
-            tk.Label(cal_frame, text=day, font=("Arial", 10, "bold"), bg=self.bg_color, fg=self.text_color).grid(row=0, column=i, padx=5, pady=5)
+        days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        for day in days:
+            day_label = tk.Label(cal_frame, text=day, font=("Arial", 12, "bold"), bg=self.bg_color, fg=self.text_color)
+            day_label.grid(row=0, column=days.index(day))
 
-        for week_num, week in enumerate(cal, start=1):
-            for day_num, day in enumerate(week):
+        for row_idx, row in enumerate(cal):
+            for col_idx, day in enumerate(row):
                 if day != 0:
-                    btn_color = self.bg_color
-                    if day == now.day and now.month == datetime.now().month and now.year == datetime.now().year:
-                        btn_color = 'light blue'  # Highlight today's date
-                    btn = tk.Button(cal_frame, text=str(day), width=4, height=2, 
-                                    command=lambda y=now.year, m=now.month, d=day: self.select_date(y, m, d, calendar_window),
-                                    bg=btn_color, fg=self.text_color, bd=1, relief='solid')
-                    btn.grid(row=week_num, column=day_num, padx=1, pady=1)
+                    day_button = tk.Button(cal_frame, text=str(day), 
+                                           command=lambda d=day: self.submit_meal(d), 
+                                           bg=self.bg_color, fg=self.text_color)
+                    day_button.grid(row=row_idx + 1, column=col_idx, padx=5, pady=5)
 
-        self.selected_date_label = tk.Label(calendar_window, text="", font=("Arial", 12, "bold"), bg=self.bg_color, fg=self.text_color)
-        self.selected_date_label.pack(pady=10)
+    def submit_meal(self, day):
+        self.daily_meals[day] = self.daily_meals.get(day, 0) + 1
+        # Update the label to show submitted message instead of popup
+        self.label.config(text="Meal submitted!", fg='green')
 
-        self.meals_text = tk.Text(calendar_window, height=5, width=40, font=("Arial", 12), bg='white', fg=self.text_color)
-        self.meals_text.pack(pady=10)
-
-        self.submit_button = tk.Button(calendar_window, text="Submit", font=("Arial", 12), command=self.submit_meal)
-        self.submit_button.pack(pady=10)
-
-    def select_date(self, year, month, day, window):
-        self.current_date = f"{year}-{month:02d}-{day:02d}"
-        self.selected_date_label.config(text=f"Selected Date: {self.current_date}")
-        self.show_meals_for_date(self.current_date)
-
-    def show_meals_for_date(self, date_str):
-        self.meals_text.delete('1.0', tk.END)
-        if date_str in self.daily_meals:
-            self.meals_text.insert(tk.END, self.daily_meals[date_str])
-
-    def submit_meal(self):
-        meal = self.meals_text.get('1.0', tk.END).strip()
-        if meal:
-            self.daily_meals[self.current_date] = meal
-            tk.messagebox.showinfo("Success", "Meal saved for the selected date!")
-        else:
-            tk.messagebox.showwarning("Warning", "Please enter a meal before submitting.")
-
-root = tk.Tk()
-app = DiningHallApp(root)
-root.mainloop()
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = DiningHallApp(root)
+    root.mainloop()
