@@ -9,118 +9,123 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import time
 
-# Set up Chrome options (optional)
-options = Options()
-options.add_argument("--headless")  # Run in headless mode (no browser window)
 
-# Set up the Chrome WebDriver
-driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+def ret_df(input_url):
+    # Set up Chrome options (optional)
+    options = Options()
+    options.add_argument("--headless")  # Run in headless mode (no browser window)
 
-# Navigate to the target URL
-url = "https://williamandmary.campusdish.com/LocationsAndMenus/CommonsDiningHall"
-driver.get(url)
+    # Set up the Chrome WebDriver
+    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
 
-# Wait for the page to fully load (if necessary)
-driver.implicitly_wait(10)  # Wait up to 10 seconds for elements to appear
+    # Navigate to the target URL
+    url = input_url
+    driver.get(url)
 
-# Maximize the browser window to ensure all elements are visible
-driver.maximize_window()
+    # Wait for the page to fully load (if necessary)
+    driver.implicitly_wait(10)  # Wait up to 10 seconds for elements to appear
 
-# Get the page source after JavaScript rendering
-html = driver.page_source
+    # Maximize the browser window to ensure all elements are visible
+    driver.maximize_window()
 
-# Parse the HTML with BeautifulSoup
-soup = BeautifulSoup(html, 'html.parser')
+    # Get the page source after JavaScript rendering
+    html = driver.page_source
 
-# Extract the product titles before interacting
-titles = soup.find_all('span', {'class': 'sc-fjvvzt kQweEp HeaderItemNameLink'})
-item_names = [title.text for title in titles]
+    # Parse the HTML with BeautifulSoup
+    soup = BeautifulSoup(html, 'html.parser')
 
-# Locate all buttons and add only enabled buttons to the list
-enabled_buttons = []
-for button in driver.find_elements(By.CLASS_NAME, "HeaderItem"):
-    if not button.get_attribute('disabled'):
-        enabled_buttons.append(button)  # Only add enabled buttons
+    # Extract the product titles before interacting
+    titles = soup.find_all('span', {'class': 'sc-fjvvzt kQweEp HeaderItemNameLink'})
+    item_names = [title.text for title in titles]
 
-# Create a filtered list of item names corresponding to enabled buttons using their indices
-filtered_item_names = [button.accessible_name for button in enabled_buttons]
+    # Locate all buttons and add only enabled buttons to the list
+    enabled_buttons = []
+    for button in driver.find_elements(By.CLASS_NAME, "HeaderItem"):
+        if not button.get_attribute('disabled'):
+            enabled_buttons.append(button)  # Only add enabled buttons
 
-# Dictionary to store item names and their nutrition facts
-nutrition_data = {}
+    # Create a filtered list of item names corresponding to enabled buttons using their indices
+    filtered_item_names = [button.accessible_name for button in enabled_buttons]
 
-# Iterate through enabled buttons and click them to access nested content
-for index, button in enumerate(enabled_buttons):  # Use enabled_buttons and filtered_item_names together
-    try:
-        # Scroll to the button (if it's not visible on the screen)
-        driver.execute_script("arguments[0].scrollIntoView(true);", button)
+    # Dictionary to store item names and their nutrition facts
+    nutrition_data = {}
 
-        # Use JavaScript to click the button
-        driver.execute_script("arguments[0].click();", button)
+    # Iterate through enabled buttons and click them to access nested content
+    for index, button in enumerate(enabled_buttons[:5]):  # Use enabled_buttons and filtered_item_names together
+        try:
+            # Scroll to the button (if it's not visible on the screen)
+            driver.execute_script("arguments[0].scrollIntoView(true);", button)
 
-        # Wait until the modal with nutritional information appears and is fully loaded
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CLASS_NAME, 'ModalProductServingSize'))
-        )
+            # Use JavaScript to click the button
+            driver.execute_script("arguments[0].click();", button)
 
-        # Ensure the content stabilizes before proceeding (give time for any dynamic content to load)
-        time.sleep(1)  # Optional: Adjust this time based on the page load behavior
+            # Wait until the modal with nutritional information appears and is fully loaded
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, 'ModalProductServingSize'))
+            )
 
-        # Get the updated page source after clicking the button
-        html_after_click = driver.page_source
-        soup_after_click = BeautifulSoup(html_after_click, 'html.parser')
+            # Ensure the content stabilizes before proceeding (give time for any dynamic content to load)
+            time.sleep(1)  # Optional: Adjust this time based on the page load behavior
 
-        # Extract the "Serving Size" information
-        serving_size_div = soup_after_click.find('div', {'class': 'ModalProductServingSize'})
-        serving_size = serving_size_div.text.strip() if serving_size_div else "Serving Size not found"
+            # Get the updated page source after clicking the button
+            html_after_click = driver.page_source
+            soup_after_click = BeautifulSoup(html_after_click, 'html.parser')
 
-        # Extract the nutritional information under the <ul> tag
-        nutrition_list = soup_after_click.find('ul', {'class': 'NutritionCard'})
-        nutrition_facts = {}
+            # Extract the "Serving Size" information
+            serving_size_div = soup_after_click.find('div', {'class': 'ModalProductServingSize'})
+            serving_size = serving_size_div.text.strip() if serving_size_div else "Serving Size not found"
 
-        if nutrition_list:
-            # Iterate through each <li> item in the nutrition list
-            nutrition_items = nutrition_list.find_all('li', {'data-nesting': '1'})
-            for item in nutrition_items:
-                # Extract nutrient name and value using separate selectors
-                nutrient_name = item.contents[0].strip()  # Get the text before the <span> tag
-                nutrient_value = item.find('span').text.strip() if item.find('span') else ""
-                nutrition_facts[nutrient_name] = nutrient_value
+            # Extract the nutritional information under the <ul> tag
+            nutrition_list = soup_after_click.find('ul', {'class': 'NutritionCard'})
+            nutrition_facts = {}
 
-                # Check for nested <ul> elements for more detailed information
-                sublist = item.find('ul')
-                if sublist:
-                    sub_items = sublist.find_all('li', {'data-nesting': '2'})
-                    for sub_item in sub_items:
-                        # Extract sub-level nutrient name and value
-                        sub_nutrient_name = sub_item.contents[0].strip()
-                        sub_nutrient_value = sub_item.find('span').text.strip() if sub_item.find('span') else ""
-                        nutrition_facts[sub_nutrient_name] = sub_nutrient_value
+            if nutrition_list:
+                # Iterate through each <li> item in the nutrition list
+                nutrition_items = nutrition_list.find_all('li', {'data-nesting': '1'})
+                for item in nutrition_items:
+                    # Extract nutrient name and value using separate selectors
+                    nutrient_name = item.contents[0].strip()  # Get the text before the <span> tag
+                    nutrient_value = item.find('span').text.strip() if item.find('span') else ""
+                    nutrition_facts[nutrient_name] = nutrient_value
 
-                        # Check for further nested <ul> elements (e.g., added sugars)
-                        sub_sublist = sub_item.find('ul')
-                        if sub_sublist:
-                            sub_sub_items = sub_sublist.find_all('li', {'data-nesting': '3'})
-                            for sub_sub_item in sub_sub_items:
-                                # Extract sub-sub-level nutrient name and value
-                                sub_sub_nutrient_name = sub_sub_item.contents[0].strip()
-                                sub_sub_nutrient_value = sub_sub_item.find('span').text.strip() if sub_sub_item.find('span') else ""
-                                nutrition_facts[sub_sub_nutrient_name] = sub_sub_nutrient_value
+                    # Check for nested <ul> elements for more detailed information
+                    sublist = item.find('ul')
+                    if sublist:
+                        sub_items = sublist.find_all('li', {'data-nesting': '2'})
+                        for sub_item in sub_items:
+                            # Extract sub-level nutrient name and value
+                            sub_nutrient_name = sub_item.contents[0].strip()
+                            sub_nutrient_value = sub_item.find('span').text.strip() if sub_item.find('span') else ""
+                            nutrition_facts[sub_nutrient_name] = sub_nutrient_value
 
-        # Add serving size to the nutrition facts
-        nutrition_facts["Serving Size"] = serving_size
+                            # Check for further nested <ul> elements (e.g., added sugars)
+                            sub_sublist = sub_item.find('ul')
+                            if sub_sublist:
+                                sub_sub_items = sub_sublist.find_all('li', {'data-nesting': '3'})
+                                for sub_sub_item in sub_sub_items:
+                                    # Extract sub-sub-level nutrient name and value
+                                    sub_sub_nutrient_name = sub_sub_item.contents[0].strip()
+                                    sub_sub_nutrient_value = sub_sub_item.find('span').text.strip() if sub_sub_item.find('span') else ""
+                                    nutrition_facts[sub_sub_nutrient_name] = sub_sub_nutrient_value
 
-        # Map item name to its nutrition facts using the filtered item name
-        item_name = filtered_item_names[index]  # Use filtered_item_names instead of item_names
-        nutrition_data[item_name] = nutrition_facts
+            # Add serving size to the nutrition facts
+            nutrition_facts["Serving Size"] = serving_size
 
-    except Exception as e:
-        print(f"Could not interact with button {index + 1}: {e}")
-        time.sleep(2)  # Wait for a while before trying the next button
+            # Map item name to its nutrition facts using the filtered item name
+            item_name = filtered_item_names[index]  # Use filtered_item_names instead of item_names
+            nutrition_data[item_name] = nutrition_facts
 
-# Close the browser
-driver.quit()
+        except Exception as e:
+            print(f"Could not interact with button {index + 1}: {e}")
+            time.sleep(2)  # Wait for a while before trying the next button
 
-# Print the nutrition data dictionary
-print("Nutrition Data:", nutrition_data)
-df=pd.DataFrame.from_dict(nutrition_data, orient='index')
-print(df)
+    # Close the browser
+    driver.quit()
+
+    # Print the nutrition data dictionary
+    # print("Nutrition Data:", nutrition_data)
+    df=pd.DataFrame.from_dict(nutrition_data, orient='index')
+    
+    return df
+
+print(ret_df("https://williamandmary.campusdish.com/LocationsAndMenus/CommonsDiningHall"))
