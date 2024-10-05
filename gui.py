@@ -6,8 +6,10 @@ from test_selenium import ret_df
 import pandas as pd
 def get_menu_data(dining_hall):
     menus = {"Sadler": None, "Commons": None}
-    menus["Sadler"] = pd.read_csv("our_df.csv") #ret_df("https://williamandmary.campusdish.com/LocationsAndMenus/FoodHallSadler")
-    menus["Commons"] =  pd.read_csv("our_df.csv") #ret_df("https://williamandmary.campusdish.com/LocationsAndMenus/CommonsDiningHall")
+    # menus["Sadler"] = pd.read_csv("our_df.csv") #ret_df("https://williamandmary.campusdish.com/LocationsAndMenus/FoodHallSadler")
+    # menus["Commons"] =  pd.read_csv("our_df.csv") #ret_df("https://williamandmary.campusdish.com/LocationsAndMenus/CommonsDiningHall")
+    menus["Sadler"] = ret_df("https://williamandmary.campusdish.com/LocationsAndMenus/FoodHallSadler")
+    menus["Commons"] = ret_df("https://williamandmary.campusdish.com/LocationsAndMenus/CommonsDiningHall")
     print(menus)
     return menus.get(dining_hall, [])
 class DiningHallApp:
@@ -71,15 +73,18 @@ class DiningHallApp:
         menu_frame.pack(fill=tk.BOTH, expand=True)
         menu_df = get_menu_data(dining_hall)
         menu_df.rename(columns={"Unnamed: 0":"Item Name"}, inplace=True)
-        print("THIS IS WHAT I IS RIGHT HERE " +menu_df)
-        # for i, item in enumerate(menu_items):
-        #     item_frame = tk.Frame(menu_frame, bg='white', bd=2, relief='raised')
-        #     item_frame.grid(row=i//3, column=i%3, padx=10, pady=10)
-        #     item_label = tk.Label(item_frame, text=item['name'], font=("Arial", 12), bg='white', fg=self.text_color)
-        #     item_label.pack(pady=5)
-        #     item_button = tk.Button(item_frame, text="View Details", font=("Arial", 10),
-        #                             command=lambda i=item: self.show_item_details(i, dining_hall))
-        #     item_button.pack(pady=5)
+        # print("THIS IS WHAT I IS RIGHT HERE " +menu_df)
+        for i, (index, row) in enumerate(menu_df.iterrows()):
+            item_frame = tk.Frame(menu_frame, bg='white', bd=2, relief='raised')
+            item_frame.grid(row=i//3, column=i%3, padx=10, pady=10)
+
+            item_label = tk.Label(item_frame, text=row['Item Name'], font=("Arial", 12), bg='white', fg='black')
+            item_label.pack(pady=5)
+
+            item_button = tk.Button(item_frame, text="View Details", font=("Arial", 10),
+                                    command=lambda r=row: self.show_item_details(r, dining_hall))
+            item_button.pack(pady=5)
+
         for i, row in enumerate(menu_df.iterrows()):
         # Create a frame for each menu item
             item_frame = tk.Frame(menu_frame, bg='white', bd=2, relief='raised')
