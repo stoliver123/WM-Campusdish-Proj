@@ -2,16 +2,14 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import calendar
 from datetime import datetime
-from test_selenium import ret_df
 import pandas as pd
+
 def get_menu_data(dining_hall):
     menus = {"Sadler": None, "Commons": None}
-    # menus["Sadler"] = pd.read_csv("our_df.csv") #ret_df("https://williamandmary.campusdish.com/LocationsAndMenus/FoodHallSadler")
-    # menus["Commons"] =  pd.read_csv("our_df.csv") #ret_df("https://williamandmary.campusdish.com/LocationsAndMenus/CommonsDiningHall")
-    menus["Sadler"] = ret_df("https://williamandmary.campusdish.com/LocationsAndMenus/FoodHallSadler")
-    menus["Commons"] = ret_df("https://williamandmary.campusdish.com/LocationsAndMenus/CommonsDiningHall")
-    print(menus)
+    menus["Sadler"] = pd.read_csv("our_df.csv")  # Adjust the path if needed
+    menus["Commons"] = pd.read_csv("our_df.csv")  # Adjust the path if needed
     return menus.get(dining_hall, [])
+
 class DiningHallApp:
     def __init__(self, master):
         self.master = master
@@ -22,28 +20,36 @@ class DiningHallApp:
         master.configure(bg=self.bg_color)
         main_frame = tk.Frame(master, bg=self.bg_color)
         main_frame.pack(fill=tk.BOTH, expand=True)
+
         self.label = tk.Label(main_frame, text="Select a dining hall:", font=("Arial", 20), bg=self.bg_color, fg=self.text_color)
         self.label.pack(pady=20)
+
         sadler_img = Image.open("sadler.jpeg").resize((380, 300))
         commons_img = Image.open("commons.jpeg").resize((380, 300))
         cart_img = Image.open("cart.png").resize((50, 50))
         calendar_img = Image.open("calendar.png").resize((50,50))
+
         self.sadler_photo = ImageTk.PhotoImage(sadler_img)
         self.commons_photo = ImageTk.PhotoImage(commons_img)
         self.cart_photo = ImageTk.PhotoImage(cart_img)
         self.calendar_photo = ImageTk.PhotoImage(calendar_img)
+
         self.sadler_label = tk.Label(main_frame, image=self.sadler_photo, bg=self.bg_color)
         self.sadler_label.pack(pady=10)
         self.commons_label = tk.Label(main_frame, image=self.commons_photo, bg=self.bg_color)
         self.commons_label.pack(pady=10)
+
         self.cart_button = tk.Button(main_frame, image=self.cart_photo, bg=self.bg_color, bd=0, command=self.open_cart)
         self.cart_button.place(relx=1.0, rely=0, anchor='ne', x=-10, y=10)
         self.calendar_button = tk.Button(main_frame, image=self.calendar_photo, bg=self.bg_color, bd=0, command=self.open_calendar)
         self.calendar_button.place(relx=0, rely=0, anchor='nw', x=10, y=10)
+
         self.create_highlight("Sadler", self.sadler_label)
         self.create_highlight("Commons", self.commons_label)
+
         self.sadler_label.bind("<Button-1>", lambda e: self.open_sadler())
         self.commons_label.bind("<Button-1>", lambda e: self.open_commons())
+
         self.meals = {}
         self.cart = []
         self.daily_meals = {}
@@ -67,13 +73,17 @@ class DiningHallApp:
         options_window.title(f"{dining_hall} Menu")
         options_window.geometry("600x400")
         options_window.configure(bg=self.bg_color)
+
         label = tk.Label(options_window, text=f"Today's Menu at {dining_hall}", font=("Arial", 16, "bold"), bg=self.bg_color, fg=self.text_color)
         label.pack(pady=10)
+
         menu_frame = tk.Frame(options_window, bg=self.bg_color)
         menu_frame.pack(fill=tk.BOTH, expand=True)
+
         menu_df = get_menu_data(dining_hall)
         menu_df.rename(columns={"Unnamed: 0":"Item Name"}, inplace=True)
-        # print("THIS IS WHAT I IS RIGHT HERE " +menu_df)
+
+        # Display items with a button to view nutritional details
         for i, (index, row) in enumerate(menu_df.iterrows()):
             item_frame = tk.Frame(menu_frame, bg='white', bd=2, relief='raised')
             item_frame.grid(row=i//3, column=i%3, padx=10, pady=10)
@@ -82,74 +92,72 @@ class DiningHallApp:
             item_label.pack(pady=5)
 
             item_button = tk.Button(item_frame, text="View Details", font=("Arial", 10),
-                                    command=lambda r=row: self.show_item_details(r, dining_hall))
+                                    command=lambda r=row: self.show_item_details(r))
             item_button.pack(pady=5)
 
-        for i, row in enumerate(menu_df.iterrows()):
-        # Create a frame for each menu item
-            item_frame = tk.Frame(menu_frame, bg='white', bd=2, relief='raised')
-            
-            item_frame.grid(row=i//3, column=i%3, padx=10, pady=10)
-            
-            # Create a label for the menu item name
-            item_label = tk.Label(item_frame, text=row['Item Name'], font=("Arial", 12), bg='white', fg='black')
-            item_label.pack(pady=5)
-            
-            # Create a button for viewing details
-            item_button = tk.Button(item_frame, text="View Details", font=("Arial", 10),
-                                    command=lambda r=row: self.show_item_details(r, dining_hall))
-            item_button.pack(pady=5)
-
-    def show_item_details(self, item, dining_hall):
+    def show_item_details(self, item):
+        # Create a new window to show the details of the selected item
         details_window = tk.Toplevel(self.master)
-        details_window.title(f"{item['name']} Details")
-        details_window.geometry("300x200")
+        details_window.title(f"{item['Item Name']} Details")
+        details_window.geometry("300x250")
         details_window.configure(bg=self.bg_color)
-        
-        name_label = tk.Label(details_window, text=item['name'], font=("Arial", 14, "bold"), bg=self.bg_color, fg=self.text_color)
+
+        name_label = tk.Label(details_window, text=item['Item Name'], font=("Arial", 14, "bold"), bg=self.bg_color, fg=self.text_color)
         name_label.pack(pady=10)
-        
-        nutrition = item['nutrition']
-        nutrition_text = f"Calories: {nutrition['calories']}, Protein: {nutrition['protein']}g, Fat: {nutrition['fat']}g"
+
+        # Displaying nutritional details extracted from the DataFrame row
+        nutrition_text = ""
+        for col in item.index:
+            if col != "Item Name" and not pd.isna(item[col]):
+                nutrition_text += f"{col}: {item[col]}\n"
+
         nutrition_label = tk.Label(details_window, text=nutrition_text, font=("Arial", 12), bg=self.bg_color, fg=self.text_color)
         nutrition_label.pack(pady=10)
-        
+
+        # Label to show added to cart message
+        self.added_to_cart_label = tk.Label(details_window, text="", font=("Arial", 12), bg='green')
+        self.added_to_cart_label.pack(pady=5)
+
         add_to_cart_button = tk.Button(details_window, text="Add to Cart", font=("Arial", 12),
-                                       command=lambda: self.add_to_cart(item, dining_hall, details_window))
+                                       command=lambda: self.add_to_cart(item))
         add_to_cart_button.pack(pady=10)
 
-    def add_to_cart(self, item, dining_hall, window):
-        self.cart.append({"item": item, "dining_hall": dining_hall})
-        tk.Label(window, text="Added to cart!", font=("Arial", 12), bg=self.bg_color, fg='green').pack(pady=5)
+    def add_to_cart(self, item):
+        self.cart.append(item)
+        # Update label text instead of showing a popup
+        self.added_to_cart_label.config(text=f"{item['Item Name']} added to cart!")
 
     def open_cart(self):
         cart_window = tk.Toplevel(self.master)
         cart_window.title("Shopping Cart")
         cart_window.geometry("400x400")
         cart_window.configure(bg=self.bg_color)
-        
+
         if self.cart:
-            total_calories = 0
-            total_protein = 0
-            total_fat = 0
-            
-            for cart_item in self.cart:
-                item = cart_item["item"]
-                dining_hall = cart_item["dining_hall"]
-                nutrition = item['nutrition']
-                
-                item_text = f"{item['name']} from {dining_hall}"
+            total_nutrition = {}
+
+            for item in self.cart:
+                item_text = f"{item['Item Name']}"
                 tk.Label(cart_window, text=item_text, font=("Arial", 12), bg=self.bg_color, fg=self.text_color).pack(pady=5)
                 
-                total_calories += nutrition['calories']
-                total_protein += nutrition['protein']
-                total_fat += nutrition['fat']
-            
-            # Display totals
-            tk.Label(cart_window, text="-" * 40, bg=self.bg_color, fg=self.text_color).pack(pady=10)
-            tk.Label(cart_window, text=f"Total Calories: {total_calories}", font=("Arial", 12, "bold"), bg=self.bg_color, fg=self.text_color).pack(pady=5)
-            tk.Label(cart_window, text=f"Total Protein: {total_protein:.1f}g", font=("Arial", 12, "bold"), bg=self.bg_color, fg=self.text_color).pack(pady=5)
-            tk.Label(cart_window, text=f"Total Fat: {total_fat:.1f}g", font=("Arial", 12, "bold"), bg=self.bg_color, fg=self.text_color).pack(pady=5)
+                # Accumulate the nutritional values for each item in the cart
+                for col in item.index:
+                    if col != "Item Name" and not pd.isna(item[col]):
+                        # Remove units from strings before converting to float
+                        value_str = item[col].replace(" g", "").replace(" mg", "").replace(" kcal", "")
+                        try:
+                            value = float(value_str)
+                            if col not in total_nutrition:
+                                total_nutrition[col] = 0
+                            total_nutrition[col] += value
+                        except ValueError:
+                            pass  # Handle non-numeric values
+
+            # Display total nutritional facts
+            tk.Label(cart_window, text="Total Nutritional Facts:", font=("Arial", 14, "bold"), bg=self.bg_color, fg=self.text_color).pack(pady=10)
+            for nutrient, value in total_nutrition.items():
+                tk.Label(cart_window, text=f"{nutrient}: {value:.2f}", font=("Arial", 12), bg=self.bg_color, fg=self.text_color).pack(pady=5)
+
         else:
             tk.Label(cart_window, text="Your cart is empty", font=("Arial", 14), bg=self.bg_color, fg=self.text_color).pack(pady=20)
 
