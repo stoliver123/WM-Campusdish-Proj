@@ -128,4 +128,7 @@ def ret_df(input_url):
     
     return df
 
-print(ret_df("https://williamandmary.campusdish.com/LocationsAndMenus/CommonsDiningHall"))
+our_df = ret_df('https://williamandmary.campusdish.com/LocationsAndMenus/CommonsDiningHall')
+print(our_df)
+our_df.to_csv('our_df.csv')
+# print(ret_df("https://williamandmary.campusdish.com/LocationsAndMenus/CommonsDiningHall"))
