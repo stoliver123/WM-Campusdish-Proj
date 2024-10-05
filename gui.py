@@ -6,20 +6,20 @@ from datetime import datetime
 def get_menu_data(dining_hall):
     menus = {
         "Sadler": [
-            {"name": "Grilled Chicken", "nutrition": "Calories: 165, Protein: 31g, Fat: 3.6g"},
-            {"name": "Vegetarian Pasta", "nutrition": "Calories: 320, Protein: 12g, Fat: 6g"},
-            {"name": "Caesar Salad", "nutrition": "Calories: 230, Protein: 8g, Fat: 18g"},
-            {"name": "Tomato Soup", "nutrition": "Calories: 74, Protein: 2g, Fat: 2g"},
-            {"name": "Steamed Broccoli", "nutrition": "Calories: 31, Protein: 2.5g, Fat: 0.3g"},
-            {"name": "Chocolate Cake", "nutrition": "Calories: 352, Protein: 4g, Fat: 15g"}
+            {"name": "Grilled Chicken", "nutrition": {"calories": 165, "protein": 31, "fat": 3.6}},
+            {"name": "Vegetarian Pasta", "nutrition": {"calories": 320, "protein": 12, "fat": 6}},
+            {"name": "Caesar Salad", "nutrition": {"calories": 230, "protein": 8, "fat": 18}},
+            {"name": "Tomato Soup", "nutrition": {"calories": 74, "protein": 2, "fat": 2}},
+            {"name": "Steamed Broccoli", "nutrition": {"calories": 31, "protein": 2.5, "fat": 0.3}},
+            {"name": "Chocolate Cake", "nutrition": {"calories": 352, "protein": 4, "fat": 15}}
         ],
         "Commons": [
-            {"name": "Pepperoni Pizza", "nutrition": "Calories: 285, Protein: 12g, Fat: 10g"},
-            {"name": "Veggie Burger", "nutrition": "Calories: 242, Protein: 11g, Fat: 8g"},
-            {"name": "Greek Salad", "nutrition": "Calories: 180, Protein: 5g, Fat: 16g"},
-            {"name": "Clam Chowder", "nutrition": "Calories: 201, Protein: 10g, Fat: 12g"},
-            {"name": "Grilled Salmon", "nutrition": "Calories: 206, Protein: 22g, Fat: 12g"},
-            {"name": "Fresh Fruit Cup", "nutrition": "Calories: 60, Protein: 1g, Fat: 0g"}
+            {"name": "Pepperoni Pizza", "nutrition": {"calories": 285, "protein": 12, "fat": 10}},
+            {"name": "Veggie Burger", "nutrition": {"calories": 242, "protein": 11, "fat": 8}},
+            {"name": "Greek Salad", "nutrition": {"calories": 180, "protein": 5, "fat": 16}},
+            {"name": "Clam Chowder", "nutrition": {"calories": 201, "protein": 10, "fat": 12}},
+            {"name": "Grilled Salmon", "nutrition": {"calories": 206, "protein": 22, "fat": 12}},
+            {"name": "Fresh Fruit Cup", "nutrition": {"calories": 60, "protein": 1, "fat": 0}}
         ]
     }
     return menus.get(dining_hall, [])
@@ -58,6 +58,7 @@ class DiningHallApp:
         self.commons_label.bind("<Button-1>", lambda e: self.open_commons())
         self.meals = {}
         self.cart = []
+        self.daily_meals = {}
 
     def create_highlight(self, text, parent):
         highlight = tk.Frame(parent, bg='black', width=200, height=50)
@@ -76,7 +77,7 @@ class DiningHallApp:
     def open_dining_options(self, dining_hall):
         options_window = tk.Toplevel(self.master)
         options_window.title(f"{dining_hall} Menu")
-        options_window.geometry("360x400")
+        options_window.geometry("600x400")
         options_window.configure(bg=self.bg_color)
         label = tk.Label(options_window, text=f"Today's Menu at {dining_hall}", font=("Arial", 16, "bold"), bg=self.bg_color, fg=self.text_color)
         label.pack(pady=10)
@@ -101,7 +102,9 @@ class DiningHallApp:
         name_label = tk.Label(details_window, text=item['name'], font=("Arial", 14, "bold"), bg=self.bg_color, fg=self.text_color)
         name_label.pack(pady=10)
         
-        nutrition_label = tk.Label(details_window, text=item['nutrition'], font=("Arial", 12), bg=self.bg_color, fg=self.text_color)
+        nutrition = item['nutrition']
+        nutrition_text = f"Calories: {nutrition['calories']}, Protein: {nutrition['protein']}g, Fat: {nutrition['fat']}g"
+        nutrition_label = tk.Label(details_window, text=nutrition_text, font=("Arial", 12), bg=self.bg_color, fg=self.text_color)
         nutrition_label.pack(pady=10)
         
         add_to_cart_button = tk.Button(details_window, text="Add to Cart", font=("Arial", 12),
@@ -109,55 +112,97 @@ class DiningHallApp:
         add_to_cart_button.pack(pady=10)
 
     def add_to_cart(self, item, dining_hall, window):
-        self.cart.append(f"{item['name']} from {dining_hall}")
+        self.cart.append({"item": item, "dining_hall": dining_hall})
         tk.Label(window, text="Added to cart!", font=("Arial", 12), bg=self.bg_color, fg='green').pack(pady=5)
 
     def open_cart(self):
         cart_window = tk.Toplevel(self.master)
         cart_window.title("Shopping Cart")
-        cart_window.geometry("400x300")
+        cart_window.geometry("400x400")
         cart_window.configure(bg=self.bg_color)
         
         if self.cart:
-            for item in self.cart:
-                tk.Label(cart_window, text=item, font=("Arial", 12), bg=self.bg_color, fg=self.text_color).pack(pady=5)
+            total_calories = 0
+            total_protein = 0
+            total_fat = 0
+            
+            for cart_item in self.cart:
+                item = cart_item["item"]
+                dining_hall = cart_item["dining_hall"]
+                nutrition = item['nutrition']
+                
+                item_text = f"{item['name']} from {dining_hall}"
+                tk.Label(cart_window, text=item_text, font=("Arial", 12), bg=self.bg_color, fg=self.text_color).pack(pady=5)
+                
+                total_calories += nutrition['calories']
+                total_protein += nutrition['protein']
+                total_fat += nutrition['fat']
+            
+            # Display totals
+            tk.Label(cart_window, text="-" * 40, bg=self.bg_color, fg=self.text_color).pack(pady=10)
+            tk.Label(cart_window, text=f"Total Calories: {total_calories}", font=("Arial", 12, "bold"), bg=self.bg_color, fg=self.text_color).pack(pady=5)
+            tk.Label(cart_window, text=f"Total Protein: {total_protein:.1f}g", font=("Arial", 12, "bold"), bg=self.bg_color, fg=self.text_color).pack(pady=5)
+            tk.Label(cart_window, text=f"Total Fat: {total_fat:.1f}g", font=("Arial", 12, "bold"), bg=self.bg_color, fg=self.text_color).pack(pady=5)
         else:
             tk.Label(cart_window, text="Your cart is empty", font=("Arial", 14), bg=self.bg_color, fg=self.text_color).pack(pady=20)
 
     def open_calendar(self):
         calendar_window = tk.Toplevel(self.master)
         calendar_window.title("Calendar")
-        calendar_window.geometry("300x300")
+        calendar_window.geometry("400x600")
         calendar_window.configure(bg=self.bg_color)
+
         now = datetime.now()
         cal = calendar.monthcalendar(now.year, now.month)
-        month_year_label = tk.Label(calendar_window, text=f"{calendar.month_name[now.month]} {now.year}", font=("Arial", 16, "bold"), bg=self.bg_color, fg=self.text_color)
+
+        month_year_label = tk.Label(calendar_window, text=f"{calendar.month_name[now.month]} {now.year}", 
+                                    font=("Arial", 16, "bold"), bg=self.bg_color, fg=self.text_color)
         month_year_label.pack(pady=10)
+
         cal_frame = tk.Frame(calendar_window, bg=self.bg_color)
         cal_frame.pack()
+
         days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         for i, day in enumerate(days):
             tk.Label(cal_frame, text=day, font=("Arial", 10, "bold"), bg=self.bg_color, fg=self.text_color).grid(row=0, column=i, padx=5, pady=5)
+
         for week_num, week in enumerate(cal, start=1):
             for day_num, day in enumerate(week):
                 if day != 0:
-                    btn = tk.Button(cal_frame, text=str(day), width=4, height=2, command=lambda d=day: self.select_date(now.year, now.month, d), bg=self.bg_color, fg=self.text_color, bd=1, relief='solid')
+                    btn_color = self.bg_color
+                    if day == now.day and now.month == datetime.now().month and now.year == datetime.now().year:
+                        btn_color = 'light blue'  # Highlight today's date
+                    btn = tk.Button(cal_frame, text=str(day), width=4, height=2, 
+                                    command=lambda y=now.year, m=now.month, d=day: self.select_date(y, m, d, calendar_window),
+                                    bg=btn_color, fg=self.text_color, bd=1, relief='solid')
                     btn.grid(row=week_num, column=day_num, padx=1, pady=1)
 
-    def select_date(self, year, month, day):
-        date_str = f"{year}-{month:02d}-{day:02d}"
-        self.show_meals_for_date(date_str)
+        self.selected_date_label = tk.Label(calendar_window, text="", font=("Arial", 12, "bold"), bg=self.bg_color, fg=self.text_color)
+        self.selected_date_label.pack(pady=10)
+
+        self.meals_text = tk.Text(calendar_window, height=5, width=40, font=("Arial", 12), bg='white', fg=self.text_color)
+        self.meals_text.pack(pady=10)
+
+        self.submit_button = tk.Button(calendar_window, text="Submit", font=("Arial", 12), command=self.submit_meal)
+        self.submit_button.pack(pady=10)
+
+    def select_date(self, year, month, day, window):
+        self.current_date = f"{year}-{month:02d}-{day:02d}"
+        self.selected_date_label.config(text=f"Selected Date: {self.current_date}")
+        self.show_meals_for_date(self.current_date)
 
     def show_meals_for_date(self, date_str):
-        meals_window = tk.Toplevel(self.master)
-        meals_window.title(f"Meals on {date_str}")
-        meals_window.geometry("300x200")
-        meals_window.configure(bg=self.bg_color)
-        if date_str in self.meals:
-            for meal in self.meals[date_str]:
-                tk.Label(meals_window, text=meal, font=("Arial", 12), bg=self.bg_color, fg=self.text_color).pack(pady=5)
+        self.meals_text.delete('1.0', tk.END)
+        if date_str in self.daily_meals:
+            self.meals_text.insert(tk.END, self.daily_meals[date_str])
+
+    def submit_meal(self):
+        meal = self.meals_text.get('1.0', tk.END).strip()
+        if meal:
+            self.daily_meals[self.current_date] = meal
+            tk.messagebox.showinfo("Success", "Meal saved for the selected date!")
         else:
-            tk.Label(meals_window, text="No meals recorded for this date", font=("Arial", 12), bg=self.bg_color, fg=self.text_color).pack(pady=20)
+            tk.messagebox.showwarning("Warning", "Please enter a meal before submitting.")
 
 root = tk.Tk()
 app = DiningHallApp(root)
