@@ -1,9 +1,9 @@
 import tkinter as tk
-import tkinter.messagebox as messagebox
 from PIL import Image, ImageTk
 import calendar
 from datetime import datetime
 import pandas as pd
+from itertools import islice
 
 def get_menu_data(dining_hall):
     menus = {"Sadler": None, "Commons": None}
@@ -18,6 +18,7 @@ class DiningHallApp:
         master.geometry("400x700")
         self.bg_color = '#F0F0F0'
         self.text_color = 'black'
+        self.cart_window = None
         master.configure(bg=self.bg_color)
         main_frame = tk.Frame(master, bg=self.bg_color)
         main_frame.pack(fill=tk.BOTH, expand=True)
@@ -126,6 +127,8 @@ class DiningHallApp:
     def add_to_cart(self, item, details_window):
         self.cart.append(item)
         self.added_to_cart_label.config(text=f"{item['Item Name']} added to cart!")
+        details_window.destroy()  # Close the item details window
+        self.open_cart()  # Open the cart window to show updated contents
 
     def open_cart(self):
         cart_window = tk.Toplevel(self.master)
@@ -159,13 +162,13 @@ class DiningHallApp:
 
             # Display total nutritional facts
             tk.Label(cart_window, text="Total Nutritional Facts:", font=("Arial", 14, "bold"), bg=self.bg_color, fg=self.text_color).pack(pady=10)
+            n = len(total_nutrition)
+            total_nutrition = dict(islice(total_nutrition.items(), n-1))
             for nutrient, value in total_nutrition.items():
                 tk.Label(cart_window, text=f"{nutrient}: {value:.2f}", font=("Arial", 12), bg=self.bg_color, fg=self.text_color).pack(pady=5)
 
         else:
-            tk.Label(cart_window, text="Your cart is empty", font=("Arial", 14), bg=self.bg_color, fg=self.text_color).pack(pady=20)
-
-
+            tk.Label(cart_window, text="Your cart is empty!", font=("Arial", 14), bg=self.bg_color, fg=self.text_color).pack(pady=20)
 
     def open_calendar(self):
         calendar_window = tk.Toplevel(self.master)
@@ -199,7 +202,7 @@ class DiningHallApp:
     def submit_meal(self, day):
         self.daily_meals[day] = self.daily_meals.get(day, 0) + 1
         # Update the label to show submitted message instead of popup
-        self.label.config(text="Meal submitted!", fg='green')
+        self.label.config(text=f"Meal submitted on {day}!", fg='green')
 
 if __name__ == "__main__":
     root = tk.Tk()
