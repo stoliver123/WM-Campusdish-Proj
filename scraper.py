@@ -51,7 +51,7 @@ def ret_df(input_url):
     nutrition_data = {}
 
     # Iterate through enabled buttons and click them to access nested content
-    for index, button in enumerate(enabled_buttons[:20]):  # Use enabled_buttons and filtered_item_names together
+    for index, button in enumerate(enabled_buttons):  # Use enabled_buttons and filtered_item_names together
         try:
             # Scroll to the button (if it's not visible on the screen)
             driver.execute_script("arguments[0].scrollIntoView(true);", button)
@@ -129,6 +129,9 @@ def ret_df(input_url):
     return df
 
 our_df = ret_df('https://williamandmary.campusdish.com/LocationsAndMenus/CommonsDiningHall')
-print(our_df)
-our_df.to_csv('our_df.csv')
+our_df2 = ret_df('https://williamandmary.campusdish.com/LocationsAndMenus/FoodHallSadler')
+
+our_df.to_csv('caf_menu.csv')
+our_df2.to_csv('sad_menu.csv')
+
 # print(ret_df("https://williamandmary.campusdish.com/LocationsAndMenus/CommonsDiningHall"))
