@@ -122,8 +122,6 @@ def ret_df(input_url):
     # Close the browser
     driver.quit()
 
-    # Print the nutrition data dictionary
-    # print("Nutrition Data:", nutrition_data)
     df=pd.DataFrame.from_dict(nutrition_data, orient='index')
     
     return df
