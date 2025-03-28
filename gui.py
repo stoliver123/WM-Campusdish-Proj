@@ -8,8 +8,8 @@ from itertools import islice
 
 def get_menu_data(dining_hall):
     menus = {"Sadler": None, "Commons": None}
-    menus["Sadler"] = pd.read_csv("sad_menu.csv")  
-    menus["Commons"] = pd.read_csv("caf_menu.csv")  
+    menus["Sadler"] = pd.read_csv("db/sad_menu.csv")  
+    menus["Commons"] = pd.read_csv("db/caf_menu.csv")  
     return menus.get(dining_hall, [])
 
 class DiningHallApp:
@@ -26,10 +26,10 @@ class DiningHallApp:
         self.label = tk.Label(main_frame, text="Select a dining hall:", font=("Arial", 20), bg=self.bg_color, fg=self.text_color)
         self.label.pack(pady=20)
 
-        sadler_img = Image.open("sadler.jpeg").resize((380, 300))
-        commons_img = Image.open("commons.jpeg").resize((380, 300))
-        cart_img = Image.open("cart.png").resize((50, 50))
-        calendar_img = Image.open("calendar.png").resize((50, 50))
+        sadler_img = Image.open("imgs/sadler.jpeg").resize((380, 300))
+        commons_img = Image.open("imgs/commons.jpeg").resize((380, 300))
+        cart_img = Image.open("imgs/cart.png").resize((50, 50))
+        calendar_img = Image.open("imgs/calendar.png").resize((50, 50))
 
         self.sadler_photo = ImageTk.PhotoImage(sadler_img)
         self.commons_photo = ImageTk.PhotoImage(commons_img)
@@ -63,7 +63,7 @@ class DiningHallApp:
         label.pack(expand=True)
         highlight.bind("<Button-1>", lambda e: "break")
         label.bind("<Button-1>", lambda e: "break")
-
+ 
     def open_sadler(self):
         self.open_dining_options("Sadler")
 
